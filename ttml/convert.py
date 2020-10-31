@@ -33,54 +33,49 @@ import os
 import codecs
 import time
 import datetime
-
+import math
+import glob
 
 def get_ext(filename):
-  '''Get extension to normal file
-  '''
+  # Get extension to normal file
   f, e = os.path.splitext(filename)
   return e.lower()
 
+# Input: string of the format "seconds.milliseconds" (without quotations)
 def to_srt_time(seconds_ms):
   '''convert strictly seconds string (may have fractional part)
-    to a standard .ass file time: 00:00:33,381 --> 00:00:36,384
+    to a standard .srt file time: 00:00:33,381 --> 00:00:36,384
   '''
-  m = '0'
-  s = seconds_ms
-  seconds_ms = seconds_ms[:seconds_ms.find('.')+2]
-  if '.' in seconds_ms:
-    (s, m) = seconds_ms.split('.')
-  sec = int(s)
-  milliseconds = int(m)
-  days = sec / 86400
-  sec -= 86400*days
+  split_time = seconds_ms.split('.')
+  sec = int(split_time[0])
+  milliseconds = int(split_time[1] if len(split_time) >= 2 else '0')
 
-  hrs = sec / 3600
-  sec -= 3600*hrs
+  days = math.floor(sec / 86400)
+  sec -= 86400 * days
 
-  mins = sec / 60
-  sec -= 60*mins
+  hrs = math.floor(sec / 3600)
+  sec -= 3600 * hrs
+
+  mins = math.floor(sec / 60)
+  sec -= 60 * mins
 
   return u'{h:02d}:{m:02d}:{s:02d},{ms:03d}'.format(h=hrs, m=mins, s=sec, ms=milliseconds)
 
 def to_ass_time(seconds_ms):
-  '''convert strictly seconds string (may have fractional part)
-    to a standard .ass file time: 00:00:33.38 --> 00:00:36.38
-  '''
-  seconds_ms = str(int(float(seconds_ms) * 10**2) / 10.0**2)
-  m = '0'
-  s = seconds_ms
-  if '.' in seconds_ms:
-    (s, m) = seconds_ms.split('.')
-  sec = int(s)
-  milliseconds = int(m)
-  days = sec / 86400
+  # convert strictly seconds string (may have fractional part)
+  #  to a standard .ass file time: 0:00:15.333,0:00:20.634
+  
+  split_time = seconds_ms.split('.')
+  sec = int(split_time[0])
+  milliseconds = int(split_time[1] if len(split_time) >= 2 else '0')
+
+  days = math.floor(sec / 86400)
   sec -= 86400*days
 
-  hrs = sec / 3600
+  hrs = math.floor(sec / 3600)
   sec -= 3600*hrs
 
-  mins = sec / 60
+  mins = math.floor(sec / 60)
   sec -= 60*mins
 
   return u'{h:01d}:{m:02d}:{s:02d}.{ms:02d}'.format(h=hrs, m=mins, s=sec, ms=milliseconds)
@@ -99,8 +94,7 @@ class Style(object):
     self.y = 450
 
 class Scaling(object):
-  '''Describe scaling from one screen resolution to another
-  '''
+  # Describe scaling from one screen resolution to another
   def __init__(self, initial_w, initial_h, final_w, final_h):
     self.iw = initial_w
     self.ih = initial_h
@@ -108,8 +102,7 @@ class Scaling(object):
     self.fh = final_h
 
   def scale(self, x, y):
-    '''Scale given x,y from inital to final screen coordinates 
-    '''
+    # Scale given x,y from inital to final screen coordinates 
     scale_w = float(self.fw)/float(self.iw)
     scale_h = float(self.fh)/float(self.ih)
     return (int(float(x)*scale_w), int(float(y)*scale_h))
@@ -118,15 +111,14 @@ class Scaling(object):
     return self.scale(x,y)
 
 class Subtitle(object):
-  '''Encapsultate a given subtitle text and its format 
-  '''
+  # Encapsultate a given subtitle text and its format 
   def __init__(self, text, x=0, y=0, style=None):
     pass
 
 def ConvertToAss(content, outfile_name, scaling):
-  '''Convert to more flexible .ass format.
-  More appropriate for these subs which have furigana, color etc
-  '''
+  # Convert to more flexible .ass format.
+  # More appropriate for these subs which have furigana, color etc
+
   outfile = codecs.open(outfile_name,'w',encoding='utf8')
   soup = BeautifulSoup(content, features="xml")
 
@@ -158,14 +150,14 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 '''
   print(events, file=outfile)
   
-  '''
-  subsequent lines should be of form:
-  Dialogue: 0,0:02:12.78,0:02:15.78,Default,,0000,0000,0000,,{\pos(580,1020)}＜世はグルメ時代＞\N
-  Dialogue: 0,0:02:15.78,0:02:18.78,Default,,0000,0000,0000,,{\pos(420,1020)}＜食の探求者 美食屋たちは・\N
-  Dialogue: 0,0:02:18.78,0:02:22.79,Default,,0000,0000,0000,,{\pos(420,1020)}あまたの食材を追い求める＞\N
-  Dialogue: 0,0:02:22.79,0:02:28.79,Default,,0000,0000,0000,,{\pos(420,840)}＜そして この世の食材の頂点\N
-  Dialogue: 0,0:02:22.79,0:02:28.79,Rubi,,0000,0000,0000,,{\pos(500,900)}ゴッド\N
-  '''
+#  
+#  subsequent lines should be of form:
+#  Dialogue: 0,0:02:12.78,0:02:15.78,Default,,0000,0000,0000,,{\pos(580,1020)}＜世はグルメ時代＞\N
+#  Dialogue: 0,0:02:15.78,0:02:18.78,Default,,0000,0000,0000,,{\pos(420,1020)}＜食の探求者 美食屋たちは・\N
+#  Dialogue: 0,0:02:18.78,0:02:22.79,Default,,0000,0000,0000,,{\pos(420,1020)}あまたの食材を追い求める＞\N
+#  Dialogue: 0,0:02:22.79,0:02:28.79,Default,,0000,0000,0000,,{\pos(420,840)}＜そして この世の食材の頂点\N
+#  Dialogue: 0,0:02:22.79,0:02:28.79,Rubi,,0000,0000,0000,,{\pos(500,900)}ゴッド\N
+#  
   cuepoints = soup.cuepoints
   captions = cuepoints.find_all('cuepoint')
 
@@ -194,9 +186,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       style = 'Default'
       if s.get('ruby', u'false') != u'false':
         style = 'Rubi'
-      color=s.get('color',u'0xffffff')
-      background=s['background']
-      opacity=s['opacity']
+      # color=s.get('color',u'0xffffff')
+      # background=s['background']
+      # opacity=s['opacity']
       
       dialog = u'Dialogue: 0,{start},{end},{style},,0000,0000,0000,,{{\pos({x},{y})}}{blurb}'.format(
       start=start_time_s,
@@ -207,15 +199,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       blurb=blurb
       )
       print(dialog, file=outfile)
-      '''
-      print (u'{x},{y},{color},{background},{opacity},{style}-->{text}'.format(x=s['x'],
-        y=s['y'], 
-        color=s.get('color',u'0xffffff'),
-        background=s['background'],
-        opacity=s['opacity'],
-        ruby=s.get('ruby', u'false'),
-        text=blurb,), file=outfile)
-      '''
+ #     '''
+ #     print (u'{x},{y},{color},{background},{opacity},{style}-->{text}'.format(x=s['x'],
+ #       y=s['y'], 
+ #       color=s.get('color',u'0xffffff'),
+ #       background=s['background'],
+ #       opacity=s['opacity'],
+ #       ruby=s.get('ruby', u'false'),
+ #       text=blurb,), file=outfile)
+ #     '''
   
 def ConvertToSrt(content, outfile_name, scaling):
   '''Convert an NHK .ttml input file (contents string) to srt
@@ -247,7 +239,6 @@ def ConvertToSrt(content, outfile_name, scaling):
     print(u'{s} --> {e}'.format(s=start_time_s, e=end_time_s), file=outfile)
     
     #form caption text from 'subtitle' entries
-    caption_text = u''
     for s in subtitles:
       blurb= s.contents[0].strip()
       #this subtitle may be a "gaiji" (actually DRCS) character. If so we'll just use the
@@ -258,49 +249,57 @@ def ConvertToSrt(content, outfile_name, scaling):
         print(blurb, file=outfile)
       else:
         pass
-      '''
-      print (u'{x},{y},{color},{background},{opacity},{ruby}-->{text}'.format(x=s['x'],
-        y=s['y'], 
-        color=s.get('color',u'0xffffff'),
-        background=s['background'],
-        opacity=s['opacity'],
-        ruby=s.get('ruby', u'false'),
-        text=blurb,), file=outfile)
-      '''
+
     print(u'\n', file=outfile)
 
-'''
-Map output filetype extensions to output file converters
-'''
+#'''
+#Map output filetype extensions to output file converters
+#'''
 SUPPORTED_OUTPUT_FILETYPES = {
   '.ass' : ConvertToAss,
   '.srt' : ConvertToSrt,
 }
+
+def parse_file(infile, user_outfile=None, extension='srt'):
+  if user_outfile:
+    outfile = user_outfile
+  else:
+    outfile = '.'.join(infile.split('.')[0:-1]) + '.' + extension
+
+  if get_ext(outfile) not in SUPPORTED_OUTPUT_FILETYPES:
+    print('Sorry, unsupported file extension.')
+    return -1
+
+  ext = get_ext(outfile)
+  conversion_impl = SUPPORTED_OUTPUT_FILETYPES[ext]
+
+  content_file = open(infile,'r',encoding='utf8')
+  content = content_file.read()
+  scaling = Scaling(1600, 900, 640, 360)
+  return conversion_impl(content, outfile, scaling)
 
 
 def main():
   parser = argparse.ArgumentParser(description='Convert (NHK?) .ttml closed caption file to another format.')
   parser.add_argument('infile', help='Input NHK .ttml source file.', type=str)
   parser.add_argument('-o', '--outfile', help='Output filename with extension. If supported extenstion is not present (.ass or .srt) a .srt file using input argument filename will be generated.', type=str, default=None)
+  parser.add_argument('-e', '--extension', help='Extension of the generated file. Only for use with --folder. (srt, ass)', type=str, default='srt')
+  parser.add_argument('-f', '--folder', help='When set, infile is treated as a folder and all ttml files inside will be converted', action='store_true', default=None)
   args = parser.parse_args()
 
-  infile = args.infile
-  outfile = '{infile}.srt'.format(infile=infile)
-  if args.outfile:
-    #check to see if user specified output filename has .mp4 extention
-    outfile = args.outfile
-    if get_ext(outfile) not in SUPPORTED_OUTPUT_FILETYPES:
-      print('Sorry, unsupported file extension in output file.')
+  if args.folder:
+    extension = args.extension
+    if '.' + extension not in SUPPORTED_OUTPUT_FILETYPES:
+      print('Sorry, unsupported file extension.')
       return -1
-
-  ext = get_ext(outfile)
-  conversion_impl = SUPPORTED_OUTPUT_FILETYPES[ext]
-
-  content_file = open(infile, 'r')
-  content = content_file.read()
-  scaling = Scaling(1600, 900, 640, 360)
-  return conversion_impl(content, outfile, scaling)
-        
+    files = glob.glob(args.infile + '/*.ttml')
+    print("Converting "+str(len(files))+ " ttml files")
+    for file in files:
+      parse_file(file, None, extension)
+  else:
+    parse_file(args.infile, args.outfile)
+  
+  print('Done!')
 
 if __name__ == "__main__":
   main()
